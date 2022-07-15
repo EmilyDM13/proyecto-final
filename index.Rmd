@@ -1,0 +1,399 @@
+---
+title: "Proyecto final de procesamiento de datos"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(ggplot2)
+library(sf)
+library(DT)
+library(plotly)
+library(leaflet)
+library(dplyr)
+library(readxl)
+library(spData)
+library(stringi)
+```
+
+```{r carga-distritos, echo=FALSE, warning=FALSE, message=FALSE}
+distritos <-
+  st_read(dsn = "distritos_simplificados.geojson", quiet = TRUE) %>%
+  st_transform(4326)
+```
+
+```{r carga-datos-estadisticas, echo = FALSE, message=FALSE, warning=FALSE}
+estadisticas <- read_xls(path="estadisticaspoliciales2021.xls")
+estadisticas=subset(estadisticas, select=c("Delito", "Fecha", "Victima", "Edad", "Genero", "Provincia", "Canton", "Distrito"))
+
+estadisticas$Fecha <- as.Date(estadisticas$Fecha, format = "%d/%m/%Y")
+```
+
+# Tabla 
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Tabla estadísticas policiales 2021
+
+```{r tabla, message=FALSE, echo=FALSE, warning=FALSE}
+estadisticas %>%
+  datatable(options = list(
+    pageLength = 10,
+    language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json') 
+  ), colnames=c("Delito", "Fecha", "Víctima", "Edad", "Género", "Provincia", "Cantón", "Distrito"))
+```
+
+# Datos
+
+```{r lista-distritos}
+lista_distrito <- unique(estadisticas$Distrito)
+lista_distrito <- sort(lista_distrito)
+lista_distrito <- c("Todos", lista_distrito)
+```
+
+```{r lista-delito}
+lista_delito <- unique(estadisticas$Delito)
+lista_delito <- sort(lista_delito)
+lista_delito <- c("Todos", lista_delito)
+```
+
+```{r lista-victima}
+lista_victima <- unique(estadisticas$Victima)
+lista_victima <- sort(lista_victima)
+lista_victima <- c("Todos", lista_victima)
+```
+
+```{r lista-genero}
+lista_genero <- unique(estadisticas$Genero)
+lista_genero <- sort(lista_genero)
+lista_genero <- c("Todos", lista_genero)
+```
+
+```{r lista-edad}
+lista_edad <- unique(estadisticas$Edad)
+lista_edad <- sort(lista_edad)
+lista_edad <- c("Todos", lista_edad)
+```
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+```{r filtro-distrito}
+selectInput(
+  inputId = "Distrito",
+  label = "Distrito",
+  choices = lista_distrito,
+  selected = "Todos"
+)
+```
+
+```{r filtro-delito}
+selectInput(
+  inputId = "Delito",
+  label = "Tipo de delito",
+  choices = lista_delito,
+  selected = "Todos"
+)
+```
+
+``` {r filtro-victima}
+selectInput(
+  inputId = "Victima",
+  label = "Víctima",
+  choices = lista_victima,
+  selected = "Todos"
+)
+```
+
+``` {r filtro-genero}
+selectInput(
+  inputId = "Genero",
+  label = "Género",
+  choices = lista_genero,
+  selected = "Todos"
+)
+```
+
+```{r filtro-edad}
+selectInput(
+  inputId = "Edad",
+  label = "Edades",
+  choices = lista_edad,
+  selected = "Todos"
+)
+```
+
+```{r filtros}
+filtrarEstadisticas <- reactive ({
+  Estadisticas_filtradas <- estadisticas
+  
+  if (input$Distrito != "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      filter(Distrito == input$Distrito)
+  
+  if (input$Distrito == "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      lista_distrito <- unique(estadisticas$Distrito)
+      lista_distrito <- sort(lista_distrito)
+      lista_distrito <- c("Todos", lista_distrito)
+      
+    updateSelectInput(
+        session,
+        "Distrito",
+        label = "Distrito",
+        choices = lista_distrito,
+        selected = "Todos"
+    )
+  }}
+  
+  if (input$Delito != "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      filter(Delito == input$Delito)
+    
+  if (input$Delito == "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      lista_delito <- unique(estadisticas$Delito)
+      lista_delito <- sort(lista_delito)
+      lista_delito <- c("Todos", lista_delito)
+      
+    updateSelectInput(
+        session,
+        "Delito",
+        label = "Delito",
+        choices = lista_delito,
+        selected = "Todos"
+    )
+  }}
+  
+  if (input$Victima != "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      filter(Victima == input$Victima)
+    
+  if (input$Victima == "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      lista_victima <- unique(estadisticas$Victima)
+      lista_victima <- sort(lista_victima)
+      lista_victima <- c("Todos", lista_victima)
+      
+    updateSelectInput(
+        session,
+        "Victima",
+        label = "Víctima",
+        choices = lista_victima,
+        selected = "Todos"
+    )
+  }}
+  
+  if (input$Genero != "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      filter(Genero == input$Genero)
+    
+  if (input$Genero == "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      lista_genero <- unique(estadisticas$Genero)
+      lista_genero <- sort(lista_genero)
+      lista_genero <- c("Todos", lista_genero)
+      
+    updateSelectInput(
+        session,
+        "genero",
+        label = "Género",
+        choices = lista_genero,
+        selected = "Todos"
+    )
+  }}
+  
+  if (input$Edad != "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      filter(Edad == input$Edad)
+    
+  if (input$Edad == "Todos") {
+    Estadisticas_filtradas <-
+      Estadisticas_filtradas %>%
+      lista_edad <- unique(estadisticas$Edad)
+      lista_edad <- sort(lista_edad)
+      lista_edad <- c("Todos", lista_edad)
+      
+    updateSelectInput(
+        session,
+        "Edad",
+        label = "Edad",
+        choices = lista_edad,
+        selected = "Todos"
+    )
+  }}
+  return(Estadisticas_filtradas)
+})
+
+```
+
+Column {data-width=333}
+-----------------------------------------------------------------------
+
+### Gráfico cantidad delitos por tipo
+
+```{r grafico-cantidad-delitos}
+renderPlotly({
+  estadisticas <- filtrarEstadisticas()
+  
+grafico_delitos <-
+  estadisticas %>%
+  count(Delito) %>%
+  ggplot(aes(x = reorder(Delito, n), y = n)) +
+  geom_bar(stat = "identity") +
+  xlab("Tipo de delito") +
+  ylab("Cantidad") +
+  coord_flip() +
+  theme_minimal()
+ggplotly(grafico_delitos)
+})
+```
+
+### Gráfico cantidad de delitos por víctima
+
+```{r grafico-delitos-victima}
+renderPlotly({
+  estadisticas <- filtrarEstadisticas()
+  
+tabla4=summarise(group_by(estadisticas, Victima),
+                n=n())
+ggplot2_cantidad_delvic <- 
+  ggplot(tabla4,aes(y=reorder(Victima,+n), x=n)) +
+  geom_bar(stat = "identity", fill=c(6:10)) +
+  ylab("Tipo de víctima") +
+  xlab("Cantidad de delitos") +
+  theme_classic()
+
+ggplotly(ggplot2_cantidad_delvic) %>% config(locale = 'es')
+})
+```
+
+
+Column {data-width=333}
+-----------------------------------------------------------------------
+
+### Gráfico delitos por mes del año
+
+```{r grafico-delitos-mes, message=FALSE}
+renderPlotly({
+  estadisticas <- filtrarEstadisticas()
+
+estadisticas$fecha2=as.numeric(format(estadisticas$Fecha,"%m"))
+tabla1=summarise(group_by(estadisticas, fecha2),
+                n=n())
+ggplot2_cantidad_delitos <- 
+  ggplot(tabla1,aes(x=fecha2, y=n)) +
+  geom_bar(stat = "identity", fill=4) +
+  ylab("Cantidad de Delito") +
+  xlab("Mes") +
+  scale_x_continuous(breaks = c(1:11),labels = c("Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Set","Oct","Nov"))+
+  theme_classic()
+
+ggplotly(ggplot2_cantidad_delitos) %>% config(locale = 'es')
+})
+```
+
+### Gráfico de delitos por género
+
+```{r delitos-genero}
+renderPlotly({
+  estadisticas <- filtrarEstadisticas()
+  
+ggplot2_barras_apiladas_cantidad <-
+  estadisticas %>%
+  ggplot(aes(x = estadisticas$Delito, fill = estadisticas$Genero)) +
+  geom_bar(position = "fill") +
+  xlab("Tipo de Delito") +
+  ylab("Proporción") +
+  labs(fill = "Género") +
+  theme_classic()+
+  coord_flip()
+
+ggplotly(ggplot2_barras_apiladas_cantidad) %>% config(locale = 'es')
+})
+```
+
+Column {data-width=333}
+-----------------------------------------------------------------------
+
+### Gráfico delitos por edad
+
+```{r delitos-edad}
+renderPlotly({
+  estadisticas <- filtrarEstadisticas()
+  
+ggplot2_barras_apiladas_cantidad <-
+  estadisticas %>%
+  ggplot(aes(x = estadisticas$Delito, fill = estadisticas$Edad)) +
+  geom_bar(position = "fill") +
+  xlab("Tipo de Delito") +
+  ylab("Proporción") +
+  labs(fill = "Género") +
+  theme_classic()+
+  coord_flip()
+
+ggplotly(ggplot2_barras_apiladas_cantidad) %>% config(locale = 'es')
+})
+```
+
+### Mapa de delitos por distritos
+
+```{r, message=FALSE, warning=FALSE}
+renderLeaflet({
+  distritos <- filtrarEstadisticas()
+
+colores_distritos_delito <-
+  colorNumeric(palette = "Blues",
+               domain = estadisticas$Delito,
+               na.color = "transparent")
+
+  leaflet() %>%
+    addTiles(group = "OpenStreetMap") %>%
+    addPolygons(
+      data = distritos,
+      fillColor = ~ colores_distritos_delito(estadisticas$Delito),
+      fillOpacity = 0.7,
+      color = "black",
+      weight = 1.5,
+      popup = paste(
+        paste("<a>Distrito:</a>", distritos$distrito),
+        sep = "<br>"
+      ),
+      group = "distritos"
+    ) %>%
+    addLayersControl(baseGroups = c("OpenStreetMap"),
+                     overlayGroups = c("distritos")) %>%
+  addLegend(
+    position = "bottomleft",
+    pal = colores_distritos_delito,
+    values = distritos$distrito,
+    group = "distritos",
+    title = "Delitos"
+  )
+})
+```
+
+
+
+
+
+
+
+
+
