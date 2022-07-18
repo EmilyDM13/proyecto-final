@@ -4,6 +4,7 @@ output:
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
+    theme: united
 
 runtime: shiny
 ---
@@ -37,7 +38,7 @@ estadisticas$Fecha <- as.Date(estadisticas$Fecha, format = "%d/%m/%Y")
 
 # Tabla 
 
-Column {data-width=650}
+Column {data-width=990}
 -----------------------------------------------------------------------
 
 ### Tabla estadísticas policiales 2021
@@ -51,12 +52,6 @@ estadisticas %>%
 ```
 
 # Datos
-
-```{r lista-distritos}
-lista_distrito <- unique(estadisticas$Distrito)
-lista_distrito <- sort(lista_distrito)
-lista_distrito <- c("Todos", lista_distrito)
-```
 
 ```{r lista-delito}
 lista_delito <- unique(estadisticas$Delito)
@@ -84,15 +79,6 @@ lista_edad <- c("Todos", lista_edad)
 
 Column {.sidebar}
 -----------------------------------------------------------------------
-
-```{r filtro-distrito}
-selectInput(
-  inputId = "Distrito",
-  label = "Distrito",
-  choices = lista_distrito,
-  selected = "Todos"
-)
-```
 
 ```{r filtro-delito}
 selectInput(
@@ -133,28 +119,7 @@ selectInput(
 ```{r filtros}
 filtrarEstadisticas <- reactive ({
   Estadisticas_filtradas <- estadisticas
-  
-  if (input$Distrito != "Todos") {
-    Estadisticas_filtradas <-
-      Estadisticas_filtradas %>%
-      filter(Distrito == input$Distrito)
-  
-  if (input$Distrito == "Todos") {
-    Estadisticas_filtradas <-
-      Estadisticas_filtradas %>%
-      lista_distrito <- unique(estadisticas$Distrito)
-      lista_distrito <- sort(lista_distrito)
-      lista_distrito <- c("Todos", lista_distrito)
-      
-    updateSelectInput(
-        session,
-        "Distrito",
-        label = "Distrito",
-        choices = lista_distrito,
-        selected = "Todos"
-    )
-  }}
-  
+
   if (input$Delito != "Todos") {
     Estadisticas_filtradas <-
       Estadisticas_filtradas %>%
@@ -243,6 +208,8 @@ filtrarEstadisticas <- reactive ({
 
 ```
 
+**Fuente de los datos: [Instituto Geográfico Nacional (IGN)](https://www.snitcr.go.cr/ico_servicios_ogc_info?k=bm9kbzo6MjY=&nombre=IGN%20Cartograf%C3%ADa%201:5mil) y [Organismo de Investigación Judicial (OIJ)](https://sitiooij.poder-judicial.go.cr/index.php/ayuda/servicios-policiales/servicios-a-organizaciones/indice-de-transparencia-del-sector-publico-costarricense/datos-abiertos) **
+
 Column {data-width=333}
 -----------------------------------------------------------------------
 
@@ -256,34 +223,36 @@ grafico_delitos <-
   estadisticas %>%
   count(Delito) %>%
   ggplot(aes(x = reorder(Delito, n), y = n)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity",fill=c(1:6)) +
   xlab("Tipo de delito") +
   ylab("Cantidad") +
   coord_flip() +
   theme_minimal()
+
 ggplotly(grafico_delitos)
 })
+
 ```
 
 ### Gráfico cantidad de delitos por víctima
 
-```{r grafico-delitos-victima}
+```{r message=FALSE, warning=FALSE, echo=FALSE}
 renderPlotly({
   estadisticas <- filtrarEstadisticas()
   
-tabla4=summarise(group_by(estadisticas, Victima),
-                n=n())
-ggplot2_cantidad_delvic <- 
-  ggplot(tabla4,aes(y=reorder(Victima,+n), x=n)) +
-  geom_bar(stat = "identity", fill=c(6:10)) +
-  ylab("Tipo de víctima") +
-  xlab("Cantidad de delitos") +
-  theme_classic()
+grafico_delitos <-
+  estadisticas %>%
+  count(Victima) %>%
+  ggplot(aes(x = reorder(Victima, n), y = n)) +
+  geom_bar(stat = "identity", fill=c(8:12)) +
+  xlab("Tipo de delito") +
+  ylab("Cantidad") +
+  coord_flip()
+  theme_minimal()
 
-ggplotly(ggplot2_cantidad_delvic) %>% config(locale = 'es')
+ggplotly(grafico_delitos)
 })
 ```
-
 
 Column {data-width=333}
 -----------------------------------------------------------------------
@@ -299,7 +268,7 @@ tabla1=summarise(group_by(estadisticas, fecha2),
                 n=n())
 ggplot2_cantidad_delitos <- 
   ggplot(tabla1,aes(x=fecha2, y=n)) +
-  geom_bar(stat = "identity", fill=4) +
+  geom_bar(stat = "identity", fill=13) +
   ylab("Cantidad de Delito") +
   xlab("Mes") +
   scale_x_continuous(breaks = c(1:11),labels = c("Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Set","Oct","Nov"))+
@@ -308,6 +277,9 @@ ggplot2_cantidad_delitos <-
 ggplotly(ggplot2_cantidad_delitos) %>% config(locale = 'es')
 })
 ```
+
+Column {data-width=333}
+-----------------------------------------------------------------------
 
 ### Gráfico de delitos por género
 
@@ -329,9 +301,6 @@ ggplotly(ggplot2_barras_apiladas_cantidad) %>% config(locale = 'es')
 })
 ```
 
-Column {data-width=333}
------------------------------------------------------------------------
-
 ### Gráfico delitos por edad
 
 ```{r delitos-edad}
@@ -344,13 +313,18 @@ ggplot2_barras_apiladas_cantidad <-
   geom_bar(position = "fill") +
   xlab("Tipo de Delito") +
   ylab("Proporción") +
-  labs(fill = "Género") +
+  labs(fill = "Edad") +
   theme_classic()+
   coord_flip()
 
 ggplotly(ggplot2_barras_apiladas_cantidad) %>% config(locale = 'es')
 })
 ```
+
+# Mapa 
+
+Column {data-width=650}
+-----------------------------------------------------------------------
 
 ### Mapa de delitos por distritos
 
@@ -432,7 +406,7 @@ distritos_delitos <-
 colores_distritos_delitos <-
   colorNumeric(palette = "Reds",
                domain = distritos_delitos$delitos,
-               na.color = "transparent")
+              )
 ```
 
 ```{r}
