@@ -410,9 +410,6 @@ colores_distritos_delitos <-
 ```
 
 ```{r}
-renderLeaflet({
-  estadisticas <- filtrarEstadisticas()
-  
 leaflet() %>%
   setView(
     lng = -84.19452,
@@ -458,7 +455,6 @@ leaflet() %>%
     group = "Delitos",
     title = "Cantidad de delitos"
   )
-})
 ```
 
 
