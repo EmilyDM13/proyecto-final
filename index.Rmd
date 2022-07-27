@@ -46,7 +46,6 @@ estadisticas = subset(
     "Distrito"
   )
 )
-
 estadisticas$Fecha <- as.Date(estadisticas$Fecha, format = "%d/%m/%Y")
 ```
 
@@ -208,7 +207,6 @@ filtrarEstadisticas <- reactive ({
   }
   return(Estadisticas_filtradas)
 })
-
 ```
 
 Row {data-height=10}
@@ -279,43 +277,13 @@ Column {data-width=400}
 
 ```{r}
 distritos <-
-  distritos%>%
+  distritos %>%
   mutate(distrito_normalizado = tolower(stri_trans_general(distrito, id = "Latin-ASCII")))
-```
-
-```{r, correccion_datos, message=FALSE, warning=FALSE}
-estadisticas <-
- estadisticas %>%
-  mutate(Distrito = if_else(Distrito == "CAIRO", "EL CAIRO", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "FORTUNA", "LA FORTUNA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "HORQUETAS", "LAS HORQUETAS", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "GENERAL", "EL GENERAL", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "SAN JOSE DE LA MONTA?A", "SAN JOSE DE LA MONTANA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "MACACOMA", "MACACONA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "CEIBA", "LA CEIBA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "CORTES", "PUERTO CORTES", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "LA AMISTAD", "LA  AMISTAD", Distrito)) %>% 
-  mutate(Distrito = if_else(Distrito == "SAN JOSE (PIZOTE)", "SAN JOSE O PIZOTE", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "LOS ANGELES", "ANGELES", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "ASUNCION", "LA ASUNCION", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "MASTATE", "EL MASTATE", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "UNION", "LA UNION", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "MATA PLATANO", "MATA DE PLATANO", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "AGUA BUENA", "AGUABUENA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "PALMERA", "LA PALMERA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "TIGRA", "LA TIGRA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "MERECEDES", "MERCEDES", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "DRAKE", "BAHIA DRAKE", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "GRANJA", "LA GRANJA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "CURE?A", "CURENA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "EL CHIRRIPO", "CHIRRIPO", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "LA LEGUA", "LEGUA", Distrito)) %>%
-  mutate(Distrito = if_else(Distrito == "TAPEZCO", "TAPESCO", Distrito))
 ```
 
 ```{r}
 estadisticas <-
-  estadisticas%>%
+  estadisticas %>%
   mutate(distrito_normalizado = tolower(stri_trans_general(Distrito, id = "Latin-ASCII")))
 ```
 
@@ -325,44 +293,43 @@ estadisticas <-
   left_join(
     dplyr::select(
       st_drop_geometry(distritos),
+      codigo_dta,
       cod_canton,
       distrito_normalizado
     ),
-    by = "distrito_normalizado",
+    by = c("distrito_normalizado" = "distrito_normalizado"),
     copy = FALSE,
     keep = FALSE
   )
-```
-
-```{r}
-delitos_x_distrito <-
-  estadisticas %>%
-  count(distrito_normalizado, name = "delitos")
-```
-
-```{r}
-distritos_delitos <-
-  distritos %>%
-  left_join(
-    delitos_x_distrito,
-    by = "distrito_normalizado",
-    copy = FALSE,
-    keep = FALSE
-  )
-```
-
-```{r}
-colores_distritos_delitos <-
-  colorNumeric(palette = "Reds",
-               domain = distritos_delitos$delitos,
-              )
 ```
 
 ```{r}
 renderLeaflet({
   estadisticas <- filtrarEstadisticas()
-  
+ 
+delitos_x_distrito <-
+  estadisticas %>%
+  count(codigo_dta, name = "delitos")
+distritos_delitos <-
+  distritos %>%
+  left_join(
+    delitos_x_distrito,
+    by = "codigo_dta",
+    copy = FALSE,
+    keep = FALSE
+  ) %>%
+  mutate(delitos = ifelse(is.na(delitos), 0, delitos))
+    
+colores_distritos_delitos <-
+  colorNumeric(palette = "Reds",
+               domain = distritos_delitos$delitos,
+              )
+
 leaflet() %>%
+  setView(
+    lng = -84.19452,
+    lat = 9.572735,
+    zoom = 7) %>%
   addTiles(group = "OpenStreetMap") %>%
   addPolygons(
     data = distritos_delitos,
@@ -382,7 +349,7 @@ leaflet() %>%
       ),
       paste(
         "<strong>Cantón:</strong>",
-        distritos_delitos$canton
+        distritos_delitos$distrito
       ),
       paste(
         "<strong>Provincia:</strong>",
@@ -406,7 +373,7 @@ leaflet() %>%
 })
 ```
 
-# Graficos
+# Gráficos
 
 Column {data-width=333}
 -----------------------------------------------------------------------
